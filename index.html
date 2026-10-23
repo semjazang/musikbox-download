@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Musikbox for Windows</title>
+<link rel="icon" href="icon.png">
+<!--
+  Download-Seite für den Windows-Installer. Der Installer liegt verschlüsselt (AES-GCM) in teile/,
+  der Schlüssel steht nur im Link hinter dem # und verlässt den Browser nie.
+  Gebaut von scripts/download_seite.mjs, das paket.json und teile/ erzeugt.
+-->
+<style>
+  :root {
+    --bg: #010102; --panel: #0f1011; --flaeche: #141516; --flaeche2: #18191a;
+    --linie: #23252a; --linie2: #34343a; --text: #f7f8f8; --text2: #d0d6e0; --gedaempft: #8a8f98;
+    --akzent: #5e6ad2; --akzent-hover: #828fff; --gut: #4cb782;
+    --win: #0063b1; --win-text: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 15px/1.55 "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+    min-height: 100vh; display: flex; justify-content: center; padding: 56px 16px 40px;
+    background: radial-gradient(900px 480px at 50% -120px, rgba(94, 106, 210, .22), transparent 70%), var(--bg);
+  }
+  main { width: 100%; max-width: 560px; }
+  .kopf { text-align: center; }
+  .kopf img { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 12px 40px rgba(94, 106, 210, .35); }
+  h1 { font-size: 34px; letter-spacing: -.02em; font-weight: 650; margin: 22px 0 6px; }
+  .unter { color: var(--text2); margin: 0 auto; max-width: 420px; }
+  .karte { background: var(--panel); border: 1px solid var(--linie); border-radius: 12px; padding: 22px; margin-top: 28px; }
+  .knopf {
+    display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+    background: var(--akzent); color: #fff; border: 0; border-radius: 8px; padding: 14px 18px;
+    font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; transition: background .15s;
+  }
+  .knopf:hover { background: var(--akzent-hover); }
+  .knopf:disabled { opacity: .55; cursor: default; background: var(--akzent); }
+  .knopf.zweit { background: var(--flaeche2); border: 1px solid var(--linie2); color: var(--text); }
+  .knopf.zweit:hover { background: #202124; }
+  .klein { color: var(--gedaempft); font-size: 13px; text-align: center; margin: 10px 0 0; }
+  .balken { height: 6px; background: var(--flaeche2); border-radius: 99px; overflow: hidden; margin-top: 16px; }
+  .balken > div { height: 100%; width: 0; background: var(--akzent); transition: width .2s; }
+  .versteckt { display: none !important; }
+  h2 { font-size: 17px; font-weight: 600; margin: 0 0 4px; }
+  .schritte { list-style: none; padding: 0; margin: 18px 0 0; display: grid; gap: 14px; }
+  .schritt { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; }
+  .nr {
+    width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--flaeche2); border: 1px solid var(--linie2); font-weight: 600; font-size: 14px; color: var(--text2);
+  }
+  .schritt p { margin: 4px 0 0; color: var(--text2); }
+  .schritt b { color: var(--text); font-weight: 600; }
+  /* Nachbildung des SmartScreen-Fensters */
+  .win { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .winfenster {
+    background: var(--win); color: var(--win-text); border-radius: 6px; padding: 12px 12px 10px;
+    font: 12px/1.4 "Segoe UI", system-ui, sans-serif; min-height: 132px; display: flex; flex-direction: column;
+  }
+  .winfenster .t { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .winfenster .m { opacity: .9; flex: 1; }
+  .winfenster .info { text-decoration: underline; font-weight: 600; }
+  .winfenster .zeile { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
+  .winfenster .wk { border: 1px solid rgba(255, 255, 255, .7); padding: 3px 10px; border-radius: 2px; }
+  .ring { outline: 2px solid #ffd54a; outline-offset: 2px; border-radius: 3px; box-shadow: 0 0 0 6px rgba(255, 213, 74, .25); }
+  .winlabel { color: var(--gedaempft); font-size: 12px; margin-top: 6px; text-align: center; }
+  details { margin-top: 10px; background: var(--flaeche); border: 1px solid var(--linie); border-radius: 8px; padding: 10px 12px; }
+  summary { cursor: pointer; color: var(--text2); }
+  details p { margin: 8px 0 2px; color: var(--text2); }
+  .fertig { display: flex; align-items: center; gap: 10px; color: var(--gut); font-weight: 600; }
+  .hinweis { text-align: center; }
+  .hinweis .gross { font-size: 44px; }
+  .fuss { color: var(--gedaempft); font-size: 12px; text-align: center; margin-top: 26px; }
+  @media (max-width: 480px) {
+    body { padding-top: 36px; }
+    h1 { font-size: 28px; }
+    .win { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="kopf">
+    <img src="icon.png" alt="">
+    <h1>Musikbox</h1>
+    <p class="unter">Music and videos from YouTube without ads, in its own window on your Windows laptop.</p>
+  </div>
+
+  <!-- Windows: herunterladen -->
+  <section id="laden" class="karte versteckt">
+    <button id="knopf" class="knopf">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 20h16"/></svg>
+      <span id="knopftext">Download for Windows</span>
+    </button>
+    <p class="klein" id="groesse">Windows 10 or 11</p>
+    <div class="balken versteckt" id="balken"><div></div></div>
+  </section>
+
+  <!-- Nach dem Download: Anleitung -->
+  <section id="anleitung" class="karte versteckt">
+    <div class="fertig"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Downloaded. Three quick steps:</div>
+    <ol class="schritte">
+      <li class="schritt"><span class="nr">1</span><div>
+        <b>Open "Musikbox Setup"</b>
+        <p>Click it in your browser's downloads, at the top right of the window.</p>
+        <details id="behalten"><summary>The browser says it "isn't commonly downloaded"?</summary>
+          <p id="behalten-edge">Edge: hover over the download, click <b>…</b> then <b>Keep</b>. If it asks again, click <b>Show more</b> and <b>Keep anyway</b>.</p>
+          <p id="behalten-chrome">Chrome: click <b>Keep</b> (or <b>Download suspicious file</b>) next to the download.</p>
+          <p>It says this about every small app that isn't from a big company.</p>
+        </details>
+      </div></li>
+      <li class="schritt"><span class="nr">2</span><div>
+        <b>Windows shows a blue box: click "More info", then "Run anyway"</b>
+        <p>Windows does this for apps it doesn't know yet. It's a one-time step.</p>
+        <div class="win" aria-hidden="true">
+          <div>
+            <div class="winfenster"><div class="t">Windows protected your PC</div>
+              <div class="m">Microsoft Defender SmartScreen prevented an unrecognised app from starting.<br><span class="info ring">More info</span></div>
+              <div class="zeile"><span class="wk">Don't run</span></div></div>
+            <div class="winlabel">First: More info</div>
+          </div>
+          <div>
+            <div class="winfenster"><div class="t">Windows protected your PC</div>
+              <div class="m">App: Musikbox Setup.exe<br>Publisher: Unknown publisher</div>
+              <div class="zeile"><span class="wk ring">Run anyway</span><span class="wk">Don't run</span></div></div>
+            <div class="winlabel">Then: Run anyway</div>
+          </div>
+        </div>
+      </div></li>
+      <li class="schritt"><span class="nr">3</span><div>
+        <b>Click "Install"</b>
+        <p>It takes under a minute, then Musikbox opens by itself. Next time, start it from the icon on your desktop.</p>
+      </div></li>
+    </ol>
+    <button id="nochmal" class="knopf zweit" style="margin-top:18px">Download again</button>
+  </section>
+
+  <!-- Telefon, Mac usw. -->
+  <section id="anderes" class="karte hinweis versteckt">
+    <div class="gross">💻</div>
+    <h2>Open this link on your Windows laptop</h2>
+    <p class="unter" style="margin-top:6px">Musikbox installs on Windows. Open this same WhatsApp message on your laptop (WhatsApp app or web.whatsapp.com) and click the link there.</p>
+    <button id="kopieren" class="knopf zweit" style="margin-top:18px">Copy link</button>
+    <p class="klein" id="kopiert">&nbsp;</p>
+  </section>
+
+  <!-- Link ohne Schlüssel oder beschädigt -->
+  <section id="kaputt" class="karte hinweis versteckt">
+    <div class="gross">🔒</div>
+    <h2 id="kaputt-titel">This link is incomplete</h2>
+    <p class="unter" style="margin-top:6px" id="kaputt-text">Please open the full link from the message you received. If it still doesn't work, ask the person who sent it for a new one.</p>
+  </section>
+
+  <p class="fuss">Private link, please don't forward it.</p>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const zeigen = (id) => ['laden', 'anleitung', 'anderes', 'kaputt'].forEach((x) => $(x).classList.toggle('versteckt', x !== id));
+  const ua = navigator.userAgent;
+  const istWindows = /Windows NT/.test(ua) && !/Phone|Mobile/.test(ua);
+  const istEdge = /Edg\//.test(ua);
+
+  function b64url(s) {
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  }
+  function kaputt(titel, text) {
+    if (titel) $('kaputt-titel').textContent = titel;
+    if (text) $('kaputt-text').textContent = text;
+    zeigen('kaputt');
+  }
+
+  const roh = new URLSearchParams(location.hash.slice(1)).get('k');
+  if (!roh) return kaputt();
+  if (!istWindows) {
+    zeigen('anderes');
+    $('kopieren').onclick = async () => {
+      try { await navigator.clipboard.writeText(location.href); $('kopiert').textContent = 'Copied. Paste it into a message to yourself.'; }
+      catch (e) { $('kopiert').textContent = 'Copy the address from the browser bar instead.'; }
+    };
+    return;
+  }
+
+  let schluessel, paket, datei = null;
+  const aad = (i) => new TextEncoder().encode('musikbox-teil-' + i);
+
+  async function vorbereiten() {
+    try {
+      schluessel = await crypto.subtle.importKey('raw', b64url(roh), 'AES-GCM', false, ['decrypt']);
+      paket = await (await fetch('paket.json', { cache: 'no-store' })).json();
+      const probe = b64url(paket.probe);
+      await crypto.subtle.decrypt({ name: 'AES-GCM', iv: probe.slice(0, 12), additionalData: aad('probe') }, schluessel, probe.slice(12));
+    } catch (e) {
+      return kaputt('This link doesn’t work anymore', 'Ask the person who sent it for a new link.');
+    }
+    $('groesse').textContent = `Version ${paket.version} · ${Math.round(paket.groesse / 1048576)} MB · Windows 10 or 11`;
+    zeigen('laden');
+  }
+
+  async function laden() {
+    const knopf = $('knopf');
+    knopf.disabled = true;
+    $('balken').classList.remove('versteckt');
+    const balken = $('balken').firstElementChild;
+    try {
+      if (!datei) {
+        const gesamt = paket.teile.reduce((s, t) => s + t.laenge, 0);
+        let geladen = 0;
+        const klar = [];
+        for (let i = 0; i < paket.teile.length; i++) {
+          const antwort = await fetch(paket.teile[i].datei);
+          if (!antwort.ok) throw new Error('HTTP ' + antwort.status);
+          const leser = antwort.body.getReader();
+          const stuecke = [];
+          for (;;) {
+            const { done, value } = await leser.read();
+            if (done) break;
+            stuecke.push(value);
+            geladen += value.length;
+            const p = Math.min(99, Math.floor(geladen / gesamt * 100));
+            balken.style.width = p + '%';
+            $('knopftext').textContent = `Downloading… ${p}%`;
+          }
+          const roh = new Uint8Array(await new Blob(stuecke).arrayBuffer());
+          klar.push(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: roh.slice(0, 12), additionalData: aad(i) }, schluessel, roh.slice(12)));
+        }
+        datei = new Blob(klar, { type: 'application/octet-stream' });
+      }
+      balken.style.width = '100%';
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(datei);
+      a.download = paket.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      $('behalten-edge').classList.toggle('versteckt', !istEdge);
+      $('behalten-chrome').classList.toggle('versteckt', istEdge);
+      $('knopftext').textContent = 'Download for Windows';
+      zeigen('anleitung');
+    } catch (e) {
+      $('knopftext').textContent = 'Download failed. Try again';
+      $('balken').classList.add('versteckt');
+      balken.style.width = '0';
+    }
+    knopf.disabled = false;
+  }
+
+  $('knopf').onclick = laden;
+  $('nochmal').onclick = laden;
+  vorbereiten();
+})();
+</script>
+</body>
+</html>

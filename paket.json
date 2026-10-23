@@ -1,0 +1,32 @@
+{
+  "name": "Musikbox Setup.exe",
+  "version": "2.9",
+  "groesse": 112571953,
+  "probe": "b1TwRlZU79Qn1Oi4-i84E5PYg5atyTbY_4Jo-XUcBraO6Hjg",
+  "teile": [
+    {
+      "datei": "teile/0.bin",
+      "laenge": 20971548
+    },
+    {
+      "datei": "teile/1.bin",
+      "laenge": 20971548
+    },
+    {
+      "datei": "teile/2.bin",
+      "laenge": 20971548
+    },
+    {
+      "datei": "teile/3.bin",
+      "laenge": 20971548
+    },
+    {
+      "datei": "teile/4.bin",
+      "laenge": 20971548
+    },
+    {
+      "datei": "teile/5.bin",
+      "laenge": 7714381
+    }
+  ]
+}
